@@ -16,22 +16,7 @@ public class Recipe {
         this.ingredients = new ArrayList<>();
     }
 
-    public void setIngredient(String name, double quantity, String unit) {
-        Ingredient ingredient = new Ingredient(name, quantity, unit);
-        ingredients.add(ingredient);
-    }
-    public ArrayList<Ingredient> getIngredients() {
-        return ingredients;
-    }
-    public void viewRecipe() {
-        System.out.println("Recipe: " + name);
-        System.out.println("Category: " + category);
-        System.out.println("Instruction: " + instruction);
-        System.out.println("Ingredients:");
-        for (Ingredient ingredient : ingredients) {
-            System.out.println(ingredient);
-        }
-    }
+    // setters and getters
     public void setId(int id) {
         this.id = id;
     }
@@ -57,5 +42,12 @@ public class Recipe {
 
     public String getCategory() {
         return category;
+    }
+    public void setIngredient(String name, double quantity, String unit) {
+        Ingredient ingredient = new Ingredient(name, quantity, unit);
+        ingredients.add(ingredient);
+    }
+    public ArrayList<Ingredient> getIngredients() {
+        return ingredients;
     }
 }

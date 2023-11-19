@@ -1,5 +1,6 @@
 package com.example.javafxproject;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -8,13 +9,12 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.input.MouseEvent;
+
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ResourceBundle;
+import java.sql.SQLException;
+import java.util.*;
 
 public class Controller implements Initializable {
 
@@ -37,34 +37,37 @@ public class Controller implements Initializable {
     @FXML
     private TextField categorySearch;
 
-    ObservableList<Recipe> list;
+    private ObservableList<Recipe> list;
+    private int index = -1;
+    private Connection connection = null;
+    private PreparedStatement preparedStatement = null;
 
-    int index = -1;
-
-    Connection connection = null; // null = undefined
-    PreparedStatement preparedStatement = null;
-
+    // this code block is called when the controller is initialized
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         updateTable();
     }
 
-    public void updateTable(){
-        idColumnRM.setCellValueFactory(new PropertyValueFactory<Recipe, Integer>("id"));
-        nameColumnRM.setCellValueFactory(new PropertyValueFactory<Recipe, String>("name"));
-        categoryColumnRM.setCellValueFactory(new PropertyValueFactory<Recipe, String>("category"));
-        instructionColumnRM.setCellValueFactory(new PropertyValueFactory<Recipe, String>("instruction"));
+    // this code block sets up the table columns and populates it with data
+    public void updateTable() {
+        idColumnRM.setCellValueFactory(new PropertyValueFactory<>("id"));
+        nameColumnRM.setCellValueFactory(new PropertyValueFactory<>("name"));
+        categoryColumnRM.setCellValueFactory(new PropertyValueFactory<>("category"));
+        instructionColumnRM.setCellValueFactory(new PropertyValueFactory<>("instruction"));
 
-        list = DatabaseConnection.getRecipe();
+        list = FXCollections.observableList(DatabaseConnection.getRecipes());
         tableViewRM.setItems(list);
 
         categorySearch.textProperty().addListener((observable, oldValue, newValue) ->
-                tableViewRM.setItems(filterList(list, newValue)));
+                Platform.runLater(() -> tableViewRM.setItems(filterList(list, newValue))));
     }
 
-    public boolean searchCategory(Recipe recipe, String searchText){
-        return (recipe.getCategory().toLowerCase().contains(searchText.toLowerCase()));}
+    // this code block is used to check if a category contains the search text
+    public boolean searchCategory(Recipe recipe, String searchText) {
+        return recipe.getCategory().toLowerCase().contains(searchText.toLowerCase());
+    }
 
+    // this code block filters the list of recipes based on the search text
     private ObservableList<Recipe> filterList(List<Recipe> list, String searchText) {
         List<Recipe> filteredList = new ArrayList<>();
         for (Recipe recipe : list) {
@@ -73,59 +76,66 @@ public class Controller implements Initializable {
         return FXCollections.observableList(filteredList);
     }
 
+    // this code block updates the input fields with the details of the selected recipe
     @FXML
-    public void getSelected(MouseEvent event) {
+    public void getSelected() {
         index = tableViewRM.getSelectionModel().getSelectedIndex();
-        if (index <= -1){
+        if (index < 0) {
             return;
         }
-        inputRecipeRM.setText(nameColumnRM.getCellData(index).toString());
-        inputCategoryRM.setText(categoryColumnRM.getCellData(index).toString());
-        inputInstructionRM.setText(instructionColumnRM.getCellData(index).toString());
+        inputRecipeRM.setText(nameColumnRM.getCellData(index));
+        inputCategoryRM.setText(categoryColumnRM.getCellData(index));
+        inputInstructionRM.setText(instructionColumnRM.getCellData(index));
     }
 
+    // this code block adds a new recipe to the database
     @FXML
-    public void addRecipe(MouseEvent event) {
-        connection = DatabaseConnection.getConnection();
-        try{
-            preparedStatement = connection.prepareStatement("insert into recipe(name,category,instruction)values(?,?,?)");
+    public void addRecipe() {
+        try {
+            connection = DatabaseConnection.getConnection();
+            preparedStatement = connection.prepareStatement("INSERT INTO recipe(name, category, instruction) VALUES (?, ?, ?)");
             preparedStatement.setString(1, inputRecipeRM.getText());
             preparedStatement.setString(2, inputCategoryRM.getText());
             preparedStatement.setString(3, inputInstructionRM.getText());
             preparedStatement.execute();
             updateTable();
-        }catch (Exception e){
+        } catch (SQLException e) {
+            handleException("Error adding recipe.", e);
         }
     }
 
+    // this code block edits a recipe in the database
     @FXML
-    public void editRecipe(MouseEvent event) {
-        connection = DatabaseConnection.getConnection();
-        // try means happy path (optimistically everything in these {} should be done
-        try{
-            preparedStatement = connection.prepareStatement("update recipe set name= ?, category= ?, instruction= ? where id= ?");
+    public void editRecipe() {
+        try {
+            connection = DatabaseConnection.getConnection();
+            preparedStatement = connection.prepareStatement("UPDATE recipe SET name = ?, category = ?, instruction = ? WHERE id = ?");
             preparedStatement.setString(1, inputRecipeRM.getText());
             preparedStatement.setString(2, inputCategoryRM.getText());
             preparedStatement.setString(3, inputInstructionRM.getText());
-            preparedStatement.setInt(4, Integer.parseInt(String.valueOf(tableViewRM.getItems().get(tableViewRM.getSelectionModel().getSelectedIndex()).getId())));
+            preparedStatement.setInt(4, list.get(index).getId());
             preparedStatement.execute();
             updateTable();
-        // catch means if an exception occurs do this
-        }catch (Exception e){
+        } catch (SQLException e) {
+            handleException("Error editing recipe.", e);
         }
     }
 
+    // this code block deletes a recipe from the database
     @FXML
-    public void deleteRecipe(MouseEvent event) {
-        connection = DatabaseConnection.getConnection();
-        try{
-            preparedStatement = connection.prepareStatement("delete from recipe where id= ?");
-            preparedStatement.setInt(1, Integer.parseInt(String.valueOf(tableViewRM.getItems().get(tableViewRM.getSelectionModel().getSelectedIndex()).getId())));
+    public void deleteRecipe() {
+        try {
+            connection = DatabaseConnection.getConnection();
+            preparedStatement = connection.prepareStatement("DELETE FROM recipe WHERE id = ?");
+            preparedStatement.setInt(1, list.get(index).getId());
             preparedStatement.execute();
             updateTable();
-        }catch (Exception e){
+        } catch (SQLException e) {
+            handleException("Error deleting recipe.", e);
         }
     }
 
+    private static void handleException(String message, Exception e) {
+        e.printStackTrace();
+    }
 }
-

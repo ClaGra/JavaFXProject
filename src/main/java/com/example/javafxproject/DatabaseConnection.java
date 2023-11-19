@@ -1,35 +1,47 @@
 package com.example.javafxproject;
 
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class DatabaseConnection {
 
-    public static Connection databaseLink;
-
+    // this code block establishes a connection to the database
     public static Connection getConnection() {
-                try {
+        try {
             Class.forName("com.mysql.cj.jdbc.Driver");
-            databaseLink = DriverManager.getConnection("jdbc:mysql://localhost:3306/recipemanager", "root", "5035");
-        } catch (Exception e) {
+            return DriverManager.getConnection("jdbc:mysql://localhost:3306/recipemanager", "root", "5035");
+        } catch (ClassNotFoundException | SQLException e) {
+            handleException("Error establishing database connection.", e);
+            return null;
         }
-        return databaseLink;
     }
 
-    public static ObservableList<Recipe> getRecipe(){
-        Connection connection = getConnection();
-        ObservableList<Recipe> list = FXCollections.observableArrayList();
+    // this code block retrieves a list of recipe objects from the database
+    public static List<Recipe> getRecipes() {
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM recipe");
+             ResultSet resultSet = preparedStatement.executeQuery()) {
 
-        try {
-            PreparedStatement preparedStatement = connection.prepareStatement("select * from recipe");
-            ResultSet resultSet = preparedStatement.executeQuery();
-
-            while (resultSet.next()){
-                list.add(new Recipe(Integer.parseInt(resultSet.getString("id")), resultSet.getString("name"), resultSet.getString("category"), resultSet.getString("instruction")));
+            List<Recipe> list = new ArrayList<>();
+            while (resultSet.next()) {
+                list.add(new Recipe(
+                        resultSet.getInt("id"),
+                        resultSet.getString("name"),
+                        resultSet.getString("category"),
+                        resultSet.getString("instruction")
+                ));
             }
-        } catch (Exception e) {
+            return list;
+
+        } catch (SQLException e) {
+            handleException("Error retrieving recipes from the database", e);
+            return Collections.emptyList();
         }
-        return list;
+    }
+
+    private static void handleException(String message, Exception e) {
+        e.printStackTrace();
     }
 }

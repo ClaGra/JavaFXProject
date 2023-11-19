@@ -10,6 +10,7 @@ public class Ingredient {
         this.unit = unit;
     }
 
+    // setters and getters
     public void setName(String name) {
         this.name = name;
     }
@@ -33,11 +34,5 @@ public class Ingredient {
     public String getUnit() {
         return unit;
     }
-
-    public String toString() {
-        return name + ": " + quantity + " " + unit;
-    }
-
-
 }
 
