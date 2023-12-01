@@ -36,11 +36,8 @@ public class Controller implements Initializable {
     private TableColumn<Recipe, String> nameColumnRM;
     @FXML
     private TextField categorySearch;
-
     private ObservableList<Recipe> list;
     private int index = -1;
-    private Connection connection = null;
-    private PreparedStatement preparedStatement = null;
 
     // this code block is called when the controller is initialized
     @Override
@@ -69,11 +66,13 @@ public class Controller implements Initializable {
 
     // this code block filters the list of recipes based on the search text
     private ObservableList<Recipe> filterList(List<Recipe> list, String searchText) {
-        List<Recipe> filteredList = new ArrayList<>();
+        ArrayList<Recipe> filteredList = new ArrayList<>();
         for (Recipe recipe : list) {
-            if (searchCategory(recipe, searchText)) filteredList.add(recipe);
+            if (searchCategory(recipe, searchText)) {
+                filteredList.add(recipe);
+            }
         }
-        return FXCollections.observableList(filteredList);
+        return FXCollections.observableArrayList(filteredList);
     }
 
     // this code block updates the input fields with the details of the selected recipe
@@ -91,25 +90,23 @@ public class Controller implements Initializable {
     // this code block adds a new recipe to the database
     @FXML
     public void addRecipe() {
-        try {
-            connection = DatabaseConnection.getConnection();
-            preparedStatement = connection.prepareStatement("INSERT INTO recipe(name, category, instruction) VALUES (?, ?, ?)");
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO recipe(name, category, instruction) VALUES (?, ?, ?)")) {
             preparedStatement.setString(1, inputRecipeRM.getText());
             preparedStatement.setString(2, inputCategoryRM.getText());
             preparedStatement.setString(3, inputInstructionRM.getText());
             preparedStatement.execute();
             updateTable();
         } catch (SQLException e) {
-            handleException("Error adding recipe.", e);
+            System.out.println("Exception in adding the recipe to the database.");
         }
     }
 
     // this code block edits a recipe in the database
     @FXML
     public void editRecipe() {
-        try {
-            connection = DatabaseConnection.getConnection();
-            preparedStatement = connection.prepareStatement("UPDATE recipe SET name = ?, category = ?, instruction = ? WHERE id = ?");
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement("UPDATE recipe SET name = ?, category = ?, instruction = ? WHERE id = ?")) {
             preparedStatement.setString(1, inputRecipeRM.getText());
             preparedStatement.setString(2, inputCategoryRM.getText());
             preparedStatement.setString(3, inputInstructionRM.getText());
@@ -117,25 +114,20 @@ public class Controller implements Initializable {
             preparedStatement.execute();
             updateTable();
         } catch (SQLException e) {
-            handleException("Error editing recipe.", e);
+            System.out.println("Exception in updating the recipe in the database.");
         }
     }
 
     // this code block deletes a recipe from the database
     @FXML
     public void deleteRecipe() {
-        try {
-            connection = DatabaseConnection.getConnection();
-            preparedStatement = connection.prepareStatement("DELETE FROM recipe WHERE id = ?");
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement("DELETE FROM recipe WHERE id = ?")) {
             preparedStatement.setInt(1, list.get(index).getId());
             preparedStatement.execute();
             updateTable();
         } catch (SQLException e) {
-            handleException("Error deleting recipe.", e);
+            System.out.println("Exception in deleting the recipe from the database.");
         }
-    }
-
-    private static void handleException(String message, Exception e) {
-        e.printStackTrace();
     }
 }
